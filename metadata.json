@@ -1,0 +1,5 @@
+{
+  "name": "Daily Task Flow",
+  "description": "A comprehensive task tracker with time logging, future scheduling, and drag-and-drop reordering.",
+  "requestFramePermissions": []
+}
