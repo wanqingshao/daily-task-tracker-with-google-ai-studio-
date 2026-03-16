@@ -39,7 +39,9 @@ import {
   StickyNote,
   ChevronDown,
   ChevronUp,
-  RefreshCw
+  RefreshCw,
+  Download,
+  Upload
 } from 'lucide-react';
 import { motion, Reorder, AnimatePresence } from 'motion/react';
 import { Task, TaskStatus, RecurrenceType } from './types';
@@ -93,6 +95,54 @@ export default function App() {
 
   const toggleNotes = (id: string) => {
     setExpandedNotes(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleExport = () => {
+    const dataStr = JSON.stringify(tasks, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `daily-flow-tasks-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importedTasks = JSON.parse(content);
+        
+        if (Array.isArray(importedTasks)) {
+          // Basic validation: check if items have required fields
+          const isValid = importedTasks.every(t => t.id && t.title);
+          if (isValid) {
+            if (window.confirm('This will merge the imported tasks with your current tasks. Continue?')) {
+              // Merge tasks, avoiding duplicates by ID
+              setTasks(prev => {
+                const existingIds = new Set(prev.map(t => t.id));
+                const newTasks = importedTasks.filter(t => !existingIds.has(t.id));
+                return [...prev, ...newTasks];
+              });
+            }
+          } else {
+            alert('Invalid file format. Please use a file previously exported from this app.');
+          }
+        }
+      } catch (err) {
+        console.error('Import error:', err);
+        alert('Failed to parse the file. Please ensure it is a valid JSON file.');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    event.target.value = '';
   };
 
   // Persistence
@@ -1360,19 +1410,37 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-black/5">
-                  {(['week', 'month', 'custom'] as const).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setSummaryRange(r)}
-                      className={cn(
-                        "px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all",
-                        summaryRange === r ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
-                      )}
-                    >
-                      {r}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-black/5">
+                    {(['week', 'month', 'custom'] as const).map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => setSummaryRange(r)}
+                        className={cn(
+                          "px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                          summaryRange === r ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
+                        )}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={handleExport}
+                    className="p-2 bg-white text-gray-400 hover:text-black rounded-xl border border-black/5 shadow-sm transition-all"
+                    title="Export Data"
+                  >
+                    <Download size={14} />
+                  </button>
+                  <label className="p-2 bg-white text-gray-400 hover:text-black rounded-xl border border-black/5 shadow-sm transition-all cursor-pointer">
+                    <Upload size={14} />
+                    <input 
+                      type="file" 
+                      accept=".json" 
+                      onChange={handleImport} 
+                      className="hidden" 
+                    />
+                  </label>
                 </div>
               </div>
 
