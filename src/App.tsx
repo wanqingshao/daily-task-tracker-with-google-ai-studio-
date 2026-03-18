@@ -61,7 +61,11 @@ import {
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>(() => {
     const saved = localStorage.getItem('tasks');
-    return saved ? JSON.parse(saved) : [];
+    const parsed = saved ? JSON.parse(saved) : [];
+    return parsed.map((t: any) => ({
+      ...t,
+      status: t.status === 'pending' ? 'not-started' : t.status
+    }));
   });
   const [selectedDate, setSelectedDate] = useState(startOfToday());
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(selectedDate));
@@ -127,7 +131,12 @@ export default function App() {
               // Merge tasks, avoiding duplicates by ID
               setTasks(prev => {
                 const existingIds = new Set(prev.map(t => t.id));
-                const newTasks = importedTasks.filter(t => !existingIds.has(t.id));
+                const newTasks = importedTasks
+                  .filter((t: any) => !existingIds.has(t.id))
+                  .map((t: any) => ({
+                    ...t,
+                    status: t.status === 'pending' ? 'not-started' : t.status
+                  }));
                 return [...prev, ...newTasks];
               });
             }
@@ -320,8 +329,7 @@ export default function App() {
     setTasks(tasks.map(t => {
       if (t.id === id) {
         const nextStatus: Record<TaskStatus, TaskStatus> = {
-          'not-started': 'pending',
-          'pending': 'finished',
+          'not-started': 'finished',
           'finished': 'not-started',
         };
         return { ...t, status: nextStatus[t.status] };
@@ -377,12 +385,11 @@ export default function App() {
   const stats = useMemo(() => {
     const total = filteredTasks.length;
     const finished = filteredTasks.filter(t => t.status === 'finished').length;
-    const pending = filteredTasks.filter(t => t.status === 'pending').length;
     const notStarted = filteredTasks.filter(t => t.status === 'not-started').length;
     const totalTime = filteredTasks
       .filter(t => t.status === 'finished')
       .reduce((acc, t) => acc + t.timeSpent, 0);
-    return { total, finished, pending, notStarted, totalTime };
+    return { total, finished, notStarted, totalTime };
   }, [filteredTasks]);
 
   const monthDays = useMemo(() => {
@@ -608,10 +615,9 @@ export default function App() {
               </AnimatePresence>
 
               {/* Stats Bento */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 {[
                   { label: 'Finished', value: stats.finished, color: 'text-emerald-600' },
-                  { label: 'Pending', value: stats.pending, color: 'text-amber-600' },
                   { label: 'Total Time', value: formatDuration(stats.totalTime), color: 'text-blue-600' },
                   { label: 'Tasks', value: stats.total, color: 'text-black' },
                 ].map((stat, i) => (
@@ -1007,12 +1013,10 @@ export default function App() {
                           className={cn(
                             "relative w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center",
                             task.status === 'finished' ? "bg-emerald-500 border-emerald-500" : 
-                            task.status === 'pending' ? "border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.2)]" : 
                             "border-gray-200 hover:border-gray-400"
                           )}
                         >
                           {task.status === 'finished' && <CheckCircle2 size={8} className="text-white" />}
-                          {task.status === 'pending' && <div className="w-1 h-1 bg-amber-500 rounded-full animate-pulse" />}
                         </button>
 
                         <div className="flex-1 min-w-0">
@@ -1076,11 +1080,6 @@ export default function App() {
                               <Clock size={10} className="text-gray-300" />
                               {formatDuration(task.timeSpent)}
                             </div>
-                            {task.status === 'pending' && (
-                              <span className="text-[7px] uppercase tracking-[0.2em] font-black text-amber-600 bg-amber-50 px-1 py-0.5 rounded-md">
-                                Active
-                              </span>
-                            )}
                           </div>
                         </div>
 
@@ -1580,7 +1579,6 @@ export default function App() {
             <div className="flex items-center gap-4">
               {[
                 { label: 'Idle', color: 'bg-gray-200' },
-                { label: 'Active', color: 'bg-amber-500' },
                 { label: 'Hold', color: 'bg-gray-400' },
                 { label: 'Done', color: 'bg-emerald-500' },
               ].map((status, i) => (

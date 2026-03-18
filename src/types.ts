@@ -1,4 +1,4 @@
-export type TaskStatus = 'not-started' | 'pending' | 'finished';
+export type TaskStatus = 'not-started' | 'finished';
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly';
 
 export interface Task {
